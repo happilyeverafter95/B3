@@ -72,6 +72,7 @@ class response():
     def load_corpus(self, data, order, convert = False):
         # check corpus criteria
         if convert == False:
+            data = data.dropna(how = 'any')
             self.data = data
             self.num_messages = data.shape[0]
         else:
@@ -79,15 +80,18 @@ class response():
             self.num_messages = self.data.shape[0]
                             
     def preprocess_data(self):
+        print("preprocessing data ...")
         self.data['preproc_sent'] = self.data['sent'].apply(preprocess)
         self.data['preproc_received'] = self.data['received'].apply(preprocess) 
     
     def train_tokenizer(self):
+        print("training tokenizer ...")
         tokenizer = Tokenizer(num_words = None)
         tokenizer.fit_on_texts(self.data['preproc_received'])
         self.tokenizer = tokenizer
               
     def cluster_responses(self):
+        print("clustering responses ...")
         responses = self.data['received']
         vectorizer = TfidfVectorizer()
         response_vectors = vectorizer.fit_transform(responses)
@@ -101,7 +105,7 @@ class response():
             print("WARNING: There are less than 10 messages per class") 
         
     def train_model(self, directory = "C://Users//mandy//Desktop//B3 chatbot//B3//"):
-        
+        print("training model ...")
         tokenizer = self.tokenizer
         X = self.data['preproc_received']
         sequences = tokenizer.texts_to_sequences(X)
@@ -169,10 +173,18 @@ class response():
 
 # wrap this into another class for structuring conversations 
 
+data = pd.read_csv("C://Users//mandy//Desktop//B3 chatbot//B3//chat.csv")
+data = data[['message', 'reply']]
+data = data.rename(columns = {'message': 'sent', 'reply': 'received'})
+data = data.dropna(how = 'any')
+
+
 test = response() 
-test.load_corpus(convert, 0, True)
+test.load_corpus(data,0)
 test.preprocess_data()
 test.train_tokenizer()
 test.cluster_responses()
+# somehow the NAs come back in this step... 
+test.data = test.data.dropna(how = 'any')
 test.train_model()
-test.predict("this is test")
+test.predict("hi")
