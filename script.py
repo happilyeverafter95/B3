@@ -2,18 +2,18 @@ import pandas as pd
 import numpy as np
 
 from keras.models import Model, load_model
-from keras.layers import Dense, Embedding, Input, Activation, LSTM, Bidirectional, Dropout, GlobalMaxPooling1D
+from keras.layers import Dense, Embedding, Input, Activation, LSTM, GRU, Bidirectional, Dropout, GlobalMaxPooling1D
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.callbacks import EarlyStopping, ModelCheckpoint, Callback
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.cluster import AffinityPropagation
 
 # <----------------------- Global Config -------------------------------> 
 
 epochs = 10
 embedding_dim = 300 
-max_len = 100 # max message length
+max_len = 50 # max message length
 batch_size = 32
 glove_embeddings_index = None
 
@@ -78,7 +78,7 @@ class response():
         else:
             self.data = self.reshape(data, order)
             self.num_messages = self.data.shape[0]
-                            
+                                        
     def preprocess_data(self):
         print("preprocessing data ...")
         self.data['preproc_sent'] = self.data['sent'].apply(preprocess)
@@ -93,13 +93,12 @@ class response():
     def cluster_responses(self):
         print("clustering responses ...")
         responses = self.data['received']
-        vectorizer = TfidfVectorizer()
+        vectorizer = CountVectorizer(ngram_range = (2,2), max_df = 0.2, min_df = 0.005, max_features = 300)
         response_vectors = vectorizer.fit_transform(responses)
         AP = AffinityPropagation()
-        clustering = AP.fit(response_vectors)
-        response_classes = list(clustering.predict(response_vectors))
-        self.data['response_class'] = pd.Series(response_classes)
-        self.num_class = len(set(response_classes))
+        response_classes = AP.fit_predict(response_vectors)
+        self.data['response_class'] = pd.Series(list(response_classes))
+        self.num_class = max(response_classes) + 1
         
         if self.num_class > self.num_messages/10:
             print("WARNING: There are less than 10 messages per class") 
@@ -128,8 +127,7 @@ class response():
         embedding_layer = Embedding(len(word_index) + 1, embedding_dim, weights = [embedding_matrix], input_length = max_len, trainable = False) 
         input= Input(shape=(max_len, ), dtype = 'int32')
         embedded_sequences = embedding_layer(input) 
-        x = Bidirectional(LSTM(50, return_sequences=True))(embedded_sequences)
-        x = Bidirectional(LSTM(10, return_sequences=True))(x)
+        x = Bidirectional(GRU(50, return_sequences=True))(embedded_sequences)
         x = GlobalMaxPooling1D()(x)
         x = Dense(50, activation = 'relu')(x)
         x = Dropout(0.1)(x)
@@ -177,7 +175,9 @@ data = pd.read_csv("C://Users//mandy//Desktop//B3 chatbot//B3//chat.csv")
 data = data[['message', 'reply']]
 data = data.rename(columns = {'message': 'sent', 'reply': 'received'})
 data = data.dropna(how = 'any')
-
+from sklearn.utils import shuffle
+data = shuffle(data)
+data = data[:5000]
 
 test = response() 
 test.load_corpus(data,0)
