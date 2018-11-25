@@ -6,14 +6,8 @@ from keras.layers import Dense, Embedding, Input, Activation, LSTM, Bidirectiona
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.callbacks import EarlyStopping, ModelCheckpoint, Callback
-from sklearn.metrics import classification_report, confusion_matrix
-import tensorflow as tf
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import AffinityPropagation
-
-
-# Bot class takes a dataset with col "Message sent" -> "Message Received" 
-# TODO: support dataset with AB dialogue 
 
 # <----------------------- Global Config -------------------------------> 
 
@@ -48,7 +42,7 @@ def load_embeddings(embedding_dir="C://Users//mandy//Desktop//B3 chatbot//B3//gl
 
 # <----------------------- Prediction Class -----------------------------> 
 
-class bot(): 
+class response(): 
         
     def __init__(self):
         self.data = None
@@ -56,11 +50,34 @@ class bot():
         self.response_class = None
         self.num_class = None
         self.model = None
+        self.num_messages = None
 
-    def load_corpus(self, data):
+    def reshape(self, messages, order): 
+        
+        data = pd.DataFrame(columns = ['sent', 'received'])
+        sent = []
+        received = [] 
+        for i, msg in enumerate(messages): 
+            if i % 2 == order: 
+                sent.append(msg)
+            else: 
+                received.append(msg)
+        data['sent'] = pd.Series(sent)
+        data['received'] = pd.Series(received)
+        
+        data = data.dropna(how = 'any')
+        
+        return data
+        
+    def load_corpus(self, data, order, convert = False):
         # check corpus criteria
-        self.data = data
-                
+        if convert == False:
+            self.data = data
+            self.num_messages = data.shape[0]
+        else:
+            self.data = self.reshape(data, order)
+            self.num_messages = self.data.shape[0]
+                            
     def preprocess_data(self):
         self.data['preproc_sent'] = self.data['sent'].apply(preprocess)
         self.data['preproc_received'] = self.data['received'].apply(preprocess) 
@@ -79,6 +96,9 @@ class bot():
         response_classes = list(clustering.predict(response_vectors))
         self.data['response_class'] = pd.Series(response_classes)
         self.num_class = len(set(response_classes))
+        
+        if self.num_class > self.num_messages/10:
+            print("WARNING: There are less than 10 messages per class") 
         
     def train_model(self, directory = "C://Users//mandy//Desktop//B3 chatbot//B3//"):
         
@@ -145,11 +165,12 @@ class bot():
         
 # <----------------------- Init test example ------------------> 
 
-test = bot() 
-data = pd.DataFrame(columns = ['sent', 'received'])
-data['sent'] = pd.Series(['hi', 'hello', 'helllllooooo', 'bye', 'good bye'])
-data['received'] = pd.Series(['hi', 'herro', 'hiya', 'bybye', 'bye'])
-test.load_corpus(data)
+# Test data sets 
+
+# wrap this into another class for structuring conversations 
+
+test = response() 
+test.load_corpus(convert, 0, True)
 test.preprocess_data()
 test.train_tokenizer()
 test.cluster_responses()
