@@ -6,9 +6,7 @@ from keras.layers import Dense, Embedding, Input, Activation, LSTM, Bidirectiona
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.callbacks import EarlyStopping, ModelCheckpoint, Callback
-import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
-from keras import backend as K
 import tensorflow as tf
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import AffinityPropagation
@@ -123,7 +121,7 @@ class bot():
         
         self.model = model 
         
-    def predict(self, message): 
+    def get_class(self, message): 
         message = preprocess(message)
         message = self.tokenizer.texts_to_sequences([message])
         message = pad_sequences(message, maxlen = max_len)
@@ -132,3 +130,28 @@ class bot():
         pred_class = np.argmax(pred_class) 
         
         return pred_class
+        
+    def predict(self, message): 
+        pred_class = self.get_class(message)
+        
+        data = self.data
+        response_class = data[data['response_class'] == pred_class]['received']
+        
+        # randomly chosen message from response class 
+        random = response_class.sample(1)
+        
+        return random
+        
+        
+# <----------------------- Init test example ------------------> 
+
+test = bot() 
+data = pd.DataFrame(columns = ['sent', 'received'])
+data['sent'] = pd.Series(['hi', 'hello', 'helllllooooo', 'bye', 'good bye'])
+data['received'] = pd.Series(['hi', 'herro', 'hiya', 'bybye', 'bye'])
+test.load_corpus(data)
+test.preprocess_data()
+test.train_tokenizer()
+test.cluster_responses()
+test.train_model()
+test.predict("this is test")
