@@ -188,3 +188,5 @@ test.cluster_responses()
 test.data = test.data.dropna(how = 'any')
 test.train_model()
 test.predict("hi")
+
+# I tihnk this is as good as this gets. let's synthesize next time
