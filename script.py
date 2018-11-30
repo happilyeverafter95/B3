@@ -1,3 +1,14 @@
+"""
+
+This script trains your own many-to-one deep learning chatbot. 
+Adapted from our submission to CSSC
+
+ISSUES: 
+    - affinity prop runs too slowly
+    - accuracy is bad 
+
+"""
+
 import pandas as pd
 import numpy as np
 
@@ -184,9 +195,6 @@ test.load_corpus(data,0)
 test.preprocess_data()
 test.train_tokenizer()
 test.cluster_responses()
-# somehow the NAs come back in this step... 
-test.data = test.data.dropna(how = 'any')
 test.train_model()
 test.predict("hi")
 
-# I tihnk this is as good as this gets. let's synthesize next time
